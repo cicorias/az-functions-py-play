@@ -41,3 +41,8 @@ venv.bak/
 __pycache__/
 *.py[cod]
 *$py.class
+
+
+
+# azurite azure develpment storage emulator v3
+.azurite/
