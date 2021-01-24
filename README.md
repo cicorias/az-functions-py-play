@@ -23,3 +23,29 @@ Creating and Event Grid Viewer:
 General Local experience
 
 [Azure Functions Event Grid local debugging \| Microsoft Docs](https://docs.microsoft.com/en-us/azure/azure-functions/functions-debug-event-grid-trigger-local)
+
+
+# Runing Azurite Storage Emulator
+
+
+```bash
+#!/usr/bin/env bash
+
+# Note replaced by task.json task.
+
+mkdir -p ./.azurite/data
+
+docker run -it --rm -p 10000:10000 -v $(pwd)/.azurite/data:/data \
+    mcr.microsoft.com/azure-storage/azurite
+
+
+
+ #docker run -it --rm -p 10000:10000 -p 10001:10001 -p 10002:10002 -v $(pwd)/.azurite/data:/opt/azurite/folder cicorias/azureite:2
+```
+
+
+# Deploying a function pack 
+
+```
+az functionapp deployment source config-zip -g scicoriafunctest -n scicoriafunctest --src az-functions-py-play.zip
+```
