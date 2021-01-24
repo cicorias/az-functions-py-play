@@ -21,6 +21,38 @@
 				"command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
 			},
 			"problemMatcher": []
+		},
+		{
+			"label": "run azurite emulator",
+			"type": "docker-run",
+			"dockerRun": {
+				"image": "mcr.microsoft.com/azure-storage/azurite",
+				"containerName": "azuritemulator",
+				"ports": [
+					{
+						"containerPort": 10000,
+						"hostPort": 10000,
+						"protocol": "tcp"
+					},
+					{
+						"containerPort": 10001,
+						"hostPort": 10001,
+						"protocol": "tcp"
+					},
+					{
+						"containerPort": 10002,
+						"hostPort": 10002,
+						"protocol": "tcp"
+					}
+				],
+				"volumes": [
+					{
+						"localPath": "${workspaceFolder}/.azurite/data",
+						"containerPath": "/data"
+					}
+				],
+				"remove": true
+			}
 		}
 	]
 }
