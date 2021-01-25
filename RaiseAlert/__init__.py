@@ -1,5 +1,8 @@
 import logging
 import datetime
+import json
+from typing import Dict, Iterator, List, Union
+import uuid
 
 import azure.functions as func
 
@@ -9,33 +12,47 @@ def main(req: func.HttpRequest, outputEvent,
 
     logging.info('Python HTTP trigger function processed a request.')
 
-    name = req.params.get('name')
-    if not name:
-        try:
-            req_body = req.get_json()
-        except ValueError:
-            pass
-        else:
-            name = req_body.get('name')
+    try:
+        content = req.get_json()
 
-    if name:
-        outputEvent.set(
-            func.EventGridOutputEvent(
-                id="test-id",
-                data={"tag1": "value1", "tag2": "value2"},
-                subject="test-subject",
-                event_type="test-event-1",
-                event_time=datetime.datetime.utcnow(),
-                data_version="1.0"))
+        outputEvent.set(get_events(content))
+        # outputEvent2.set(get_events(content))
 
-        outputEvent2.set(func.QueueMessage(
-            id="abc", body="the body of message", pop_receipt="none"))
+        if not content:
+            raise Exception("No request content")
 
-        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.",
+        return func.HttpResponse("Hello, This HTTP triggered function executed successfully.",
                                  status_code=202)
-    else:
-        return func.HttpResponse(
-            """This HTTP triggered function executed successfully.
-            Pass a name in the query string or in the request body for a personalized response.""",
-            status_code=200
-        )
+    except ValueError:
+        pass
+    except:
+        return create_response("No request content, no events will be created")
+
+
+def get_events(requestJson: List[Dict]) -> Union[Iterator[func.EventGridOutputEvent], Iterator[func.QueueMessage]]:
+
+    try:
+        jsonBody = json.loads(requestJson)
+    except:
+        jsonBody = requestJson
+    finally:
+        if not jsonBody:
+            jsonBody = list()
+
+    logging.info(f"jsonBody: {jsonBody}")
+    if jsonBody:
+        for event in jsonBody:
+            if event: # is this needed?
+                logging.info(f"event {event}")
+                yield func.EventGridOutputEvent(
+                    id=str(uuid.uuid4()),
+                    subject=event.get("Subject", "Unknown"),
+                    data=event,
+                    event_type=event.get("EventType", "Unknown"),
+                    event_time=datetime.datetime.now(),
+                    data_version=2.0,
+                )
+
+
+def create_response(msg, status_code=200, **kwargs):
+    return func.HttpResponse(msg, status_code=status_code, **kwargs)

@@ -46,3 +46,4 @@ __pycache__/
 
 # azurite azure develpment storage emulator v3
 .azurite/
+az-functions-py-play.zip
