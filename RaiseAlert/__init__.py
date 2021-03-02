@@ -1,41 +1,71 @@
+from dataclasses import dataclass
 import logging
-import datetime
-
+import sys
 import azure.functions as func
+# from packaging import version
+from typing import Generator, List
+import uuid
+from datetime import datetime
+
+logger = logging.getLogger()
 
 
-def main(req: func.HttpRequest, outputEvent,
-         outputEvent2: func.Out[func.QueueMessage]) -> func.HttpResponse:
+@dataclass
+class EventPayload:
+    """ This is the event structure we get from ASA via the Functions HTTP binding """
+    CorrelationId: str = ''
+    Timestamp: str = ''
+    NumberOfCauses: int = 0
+    Subject: str = ''
+    EventType: str = ''
 
-    logging.info('Python HTTP trigger function processed a request.')
 
-    name = req.params.get('name')
-    if not name:
-        try:
-            req_body = req.get_json()
-        except ValueError:
-            pass
-        else:
-            name = req_body.get('name')
+def main(req: func.HttpRequest, outputEvent: func.Out[List[func.EventGridOutputEvent]]) -> func.HttpResponse:
+    # if sys.version.parse(sys.version) < sys.version.parse("3.7.4"):
+    #     logger.error('function app is not at version 3.7.4')
 
-    if name:
-        outputEvent.set(
-            func.EventGridOutputEvent(
-                id="test-id",
-                data={"tag1": "value1", "tag2": "value2"},
-                subject="test-subject",
-                event_type="test-event-1",
-                event_time=datetime.datetime.utcnow(),
-                data_version="1.0"))
+    logger.info(f'python version: {sys.version}')
 
-        outputEvent2.set(func.QueueMessage(
-            id="abc", body="the body of message", pop_receipt="none"))
+    try:
+        content = req.get_json()
+        if not content:
+            raise Exception("No request content")
+    except:
+        return create_response("No request content, no events will be created")
 
-        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.",
-                                 status_code=202)
-    else:
-        return func.HttpResponse(
-            """This HTTP triggered function executed successfully.
-            Pass a name in the query string or in the request body for a personalized response.""",
-            status_code=200
-        )
+    try:
+        rv = get_events(content)
+        outputEvent.set(list(rv))
+        logger.info("event grid output event set...")
+
+    except Exception as e:
+        logger.exception(f"Unable to publish event to the event grid. {e}")
+        return create_response("Error publishing event", status_code=500)
+
+    logger.info("Message submitted to EventGrid...")
+    return create_response("Message submitted successfully. eee")
+
+
+def create_response(msg: str, status_code: int = 200):
+    return func.HttpResponse(msg, status_code=status_code)
+
+
+def get_events(requestJson: List[EventPayload]) -> Generator[func.EventGridOutputEvent, None, None]:
+    """ Given a Stream Analytics event, create an iterable of EventGrid messages"""
+
+    if requestJson:
+        for event in requestJson:
+            if event:
+                yield asa_event_to_eventgrid_message(EventPayload(**event))
+
+
+def asa_event_to_eventgrid_message(asa_event: EventPayload) -> func.EventGridOutputEvent:
+    logging.info("event grid output", extra={"correlationId": asa_event.CorrelationId})
+    return func.EventGridOutputEvent(
+        id=str(uuid.uuid4()),
+        subject=asa_event.get("Subject"),
+        data={"data": asa_event},
+        event_type=asa_event.get("EventType", "Unknown"),
+        event_time=datetime.now(),
+        data_version="2.0"
+    )

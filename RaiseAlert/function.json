@@ -17,13 +17,6 @@
       "name": "$return"
     },
     {
-      "type": "queue",
-      "direction": "out",
-      "name": "outputEvent2",
-      "queueName": "egtesting",
-      "connection": "storagequeueconnection"
-    },
-    {
       "type": "eventGrid",
       "name": "outputEvent",
       "topicEndpointUri": "MyEventGridTopicUriSetting",
